@@ -1,0 +1,48 @@
+# Decisions
+
+Rulings made while building yaraci without access to the requester. Format:
+`- Ruling: <what> — <why> — <cost if wrong>`.
+
+## Engines and parsing
+
+- Ruling: YARA-X (`yara-x` 1.22.0) is the default engine; classic libyara (`yara-python` 4.5.4) is a second backend behind the same `Backend` protocol — YARA-X is the actively developed successor and gives structured, coded diagnostics; keeping libyara lets teams gate the engine they actually deploy and enables the `parity` command — if a team only runs libyara, they must set `[pack].engine = "libyara"`, and slow-rule verdicts differ by engine (see README Limitations).
+- Ruling: write a hand-rolled lexer + recursive-descent parser instead of relying on engine introspection — neither Python binding exposes rule ASTs (strings, modifiers, condition structure), and every condition check needs them — the parser can lag behind new YARA syntax; mitigated by treating the engine as the authority (a YC001 parse error without a YC501 compile error is reported as a parser limitation, and the file is still compiled and scanned).
+- Ruling: all pack files compile into one namespace, ordered by a topological sort of cross-file rule references (Kahn's algorithm, path order as tie-break) — real packs keep helper rules in files that sort *after* their users (`filetypes.yar` vs `binaries.yar`); alphabetical order failed to compile the example pack on the first run — packs that rely on per-file namespaces (same rule name in two files) are reported as duplicates (YC103).
+- Ruling: `include` directives are rejected (YC002) rather than resolved — discovery is directory-based, and includes would compile files twice and make per-rule isolation ambiguous — repositories built around an index file need a small restructuring.
+
+## Lint
+
+- Ruling: atom quality is a documented heuristic *modelled on* libyara's `yr_atoms_heuristic_quality`, not a port (letters 18, common bytes 00/20/90/CC/FF 12, other bytes 20, nocase letters 14, identical-byte atoms halved, xor/base64 −15; threshold 45) — the libyara function is internal and differs from YARA-X's atom selection anyway; the profiler measures real cost — the static estimate can disagree with the engine; it is a warning, never a gate by default.
+- Ruling: `\s*`, `\d*` and positive character classes are not flagged as unbounded repetition (YC302); only `.`, negated classes and `\S \W \D` are — those can span arbitrary content, whitespace runs cannot run far in binaries — a pathological `\s*` on whitespace-heavy text slips through YC302 (the profiler still catches real cost).
+- Ruling: unused strings are not a lint check — both engines already reject unreferenced strings as a compile error, which yaraci reports as YC501 — none.
+- Ruling: lint checks run on private rules too, but required/recommended metadata (YC201/YC202) is not demanded of private helper rules — helpers never alert, so author/description are documentation, not triage data — teams that want metadata everywhere must add a custom policy.
+
+## Testing model
+
+- Ruling: true-positive fixtures use a directory convention (`fixtures/<Rule>/match/`, `fixtures/<Rule>/nomatch/`) instead of a manifest file — zero-config, reviewable in a diff, and the rule name is the directory so orphans are detectable — a fixture that should test several rules must be duplicated per rule.
+- Ruling: fixtures are scanned with the *whole* compiled pack, not the isolated rule — tests must reflect deployed behaviour (helper rules, global rules) — a global rule can make a fixture fail for reasons outside the tested rule; the failure message lists every rule that matched.
+- Ruling: a public rule without a `match` fixture fails the TP gate by default (`fail_on_untested = true`) — the brief requires every rule to ship expected-match fixtures — teams adopting yaraci on a legacy pack need to set it to false initially.
+- Ruling: matches on curated `nomatch` fixtures count as false positives in the diff (not only goodware matches) — they are hand-picked near-misses, the most valuable negatives a pack has — none known.
+- Ruling: private rules are excluded from TP coverage and from FP reporting — they never appear in engine match results — a broken helper rule shows up only through its dependants' fixtures.
+- Ruling: FP allowlist entries are keyed by (rule, SHA-256) and must carry a reason and an expiry date; expired entries stop suppressing and are reported (YC702) — accepted FPs must be re-reviewed, and content hashes survive file renames — a vendor that re-signs a binary every release needs a new entry each time.
+
+## Profiling
+
+- Ruling: per-rule cost is measured by compiling each rule *in isolation* (with its dependency closure plus all global rules), scanning each sample `repeat` times, keeping the minimum, and subtracting a baseline rule set that contains one never-matching strong-atom pattern — min-of-k is the standard estimator under one-sided interference; a no-pattern baseline (first tried) charged every rule with strings the cost of the engine's whole scan pass (compare the no-pattern baseline with any single-rule cost in `bench/RESULTS.md` section B), making all rules look equally expensive — interaction effects between rules (shared atoms) are invisible to isolation; `--method leave-one-out` measures them at the price of one full-pack compile per rule.
+- Ruling: slow = over the absolute budget, *or* (≥ 4× the pack median *and* robust z ≥ 3.5 using median/MAD *and* above a 200 µs/MiB noise floor) — median/MAD cannot be dragged by the outlier being judged; the floor stops a pack of uniformly fast rules from flagging its slowest member — thresholds were set on the example packs and a synthetic corpus, not on a large real-world pack.
+- Ruling: the example v1 PowerShell rule was rewritten during development after the profiler flagged it (4 nocase patterns whose regexes started with `-`; anchoring them on a leading `\s` made it ~4.9× cheaper on YARA-X in `bench/RESULTS.md`) — this is the workflow the tool exists for — none; the before/after pair is kept in the benchmark.
+- Ruling: slow-rule verdicts are engine specific and only the configured engine gates — on libyara, two v1 rules (`MAL_Doc_OLE_AutoOpenShell`, `MAL_RansomNote_Generic`, many `nocase` strings) exceed the outlier threshold on the synthetic benchmark corpus while they are unremarkable on YARA-X — a team switching engines may see new performance failures.
+
+## Gate, scoring and output
+
+- Ruling: exit codes are a bitmask (1 lint, 2 TP, 4 FP, 8 perf, 16 quality, 32 compile) with 64/70 reserved for usage/internal errors — one CI run shows every failing gate, and `$? & 4` is scriptable — tools that only test `$? != 0` lose nothing.
+- Ruling: the quality score is a fixed-weight deduction model (lint capped at 40, untested 25, failing fixture 40, 20 per FP capped at 60, slow 20) with letter grades — transparent and explainable per rule; weights chosen so a single FP or failing fixture outweighs any amount of style debt — the weights are not statistically calibrated; they are documented in `docs/QUALITY_MODEL.md` and in `quality.py`.
+- Ruling: SARIF results carry a `partialFingerprints` hash of (code, rule, path, message) without the line number — code scanning then keeps alert identity when a rule moves within the file — two identical findings for the same rule collapse into one alert identity.
+- Ruling: SARIF output omits `helpUri`/`informationUri` — the repository has no public URL yet and inventing one would be dishonest — users see the rationale in `fullDescription` instead.
+
+## Corpus and data
+
+- Ruling: archives (zip/wheel/jar, tar/tar.gz) are expanded one level deep, in memory, with per-member (8 MiB), per-archive (64 MiB) and member-count (2,000) budgets enforced on bytes actually read — wheels are the goodware we fetch, and header sizes can lie — nested archives are scanned only as opaque blobs.
+- Ruling: the goodware corpus has three sources: committed synthetic files, pinned PyPI wheels fetched by `make goodware` (SHA-256 verified, cached under `.cache/`, never committed), and opt-in system binaries (`--system`) — the gate must be reproducible offline, while real binaries are machine specific — the bundled goodware is small (19 files), so FP evidence in `make check` is weak; real-world FP rates need `make goodware` and `--system`.
+- Ruling: all example fixtures are generated by `scripts/make_examples.py` and `make check` fails if they drift — every byte's provenance is reviewable, and binary "malware" fixtures are provably header stubs with marker strings, not executables — none.
+- Ruling: the benchmark corpus is synthetic and generated in memory from a seed (9 MiB) — no dataset licensing issues, nothing large on disk, and it is reproducible — absolute timings do not transfer to real file mixes; only ratios are claimed.
