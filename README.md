@@ -213,7 +213,7 @@ All numbers below come from committed commands; rerun them to reproduce.
 
 **Tests and coverage** — `make test` (`uv run pytest --cov=yaraci --cov-fail-under=80`):
 255 tests (unit, Hypothesis property tests, golden example-pack tests, CLI
-end-to-end), **96.8 % branch-aware line coverage** of `src/yaraci`.
+end-to-end), **97.15 % coverage (lines + branches)** of `src/yaraci`.
 
 **Profiling benchmark** — `make bench` writes [bench/RESULTS.md](bench/RESULTS.md)
 and `bench/results.json` from a seeded, in-memory 9 MiB synthetic corpus. Highlights
