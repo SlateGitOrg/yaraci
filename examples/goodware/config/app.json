@@ -1,0 +1,1 @@
+{"name": "demo", "workers": 4, "log_level": "info", "features": ["a", "b"]}

@@ -1,0 +1,2 @@
+yaraci lab fixture - synthetic and benign
+Release notes: binaries are no longer packed (UPX0/UPX1 sections and UPX! removed).

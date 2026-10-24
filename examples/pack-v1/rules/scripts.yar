@@ -10,8 +10,8 @@ rule SUSP_PS_EncodedCommand_Hidden : powershell script
     strings:
         $ps = "powershell" nocase
         $enc1 = "-EncodedCommand" nocase
-        $enc2 = /-enc?\s+[A-Za-z0-9+\/]{40,400}={0,2}/ nocase
-        $hidden = /-w(indowstyle)?\s+hidden/ nocase
+        $enc2 = /\s-enc?\s{1,4}[A-Za-z0-9+\/]{40,400}/ nocase
+        $hidden = /\s-w(indowstyle)?\s{1,4}hidden/ nocase
     condition:
         filesize < 1MB and $ps and any of ($enc*) and $hidden
 }
