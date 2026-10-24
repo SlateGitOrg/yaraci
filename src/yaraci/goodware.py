@@ -87,11 +87,25 @@ def _file_sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
-def fetch_packages(packages: list[Package], dest: Path, timeout_s: float = 30.0) -> FetchReport:
+def _download(pkg: Package, part: Path, timeout_s: float) -> str:
+    """Stream ``pkg`` into ``part`` and return the SHA-256 of what was written."""
+    digest = hashlib.sha256()
+    with urllib.request.urlopen(pkg.url, timeout=timeout_s) as resp, part.open("wb") as out:  # noqa: S310 - scheme validated in load_manifest
+        for chunk in iter(lambda: resp.read(_CHUNK), b""):
+            digest.update(chunk)
+            out.write(chunk)
+    return digest.hexdigest()
+
+
+def fetch_packages(
+    packages: list[Package], dest: Path, timeout_s: float = 30.0, attempts: int = 3
+) -> FetchReport:
     """Download every package into ``dest``, verifying SHA-256; idempotent.
 
     A file is written to ``<name>.part`` and renamed only after its hash
     matches, so an interrupted or tampered download never enters the corpus.
+    Network errors are retried up to ``attempts`` times; a hash mismatch is not
+    retried (it is not transient).
     """
     dest.mkdir(parents=True, exist_ok=True)
     report = FetchReport()
@@ -101,22 +115,24 @@ def fetch_packages(packages: list[Package], dest: Path, timeout_s: float = 30.0)
             report.cached.append(pkg.filename)
             continue
         part = target.with_name(target.name + ".part")
-        digest = hashlib.sha256()
-        try:
-            with urllib.request.urlopen(pkg.url, timeout=timeout_s) as resp, part.open("wb") as out:  # noqa: S310 - scheme validated in load_manifest
-                for chunk in iter(lambda: resp.read(_CHUNK), b""):
-                    digest.update(chunk)
-                    out.write(chunk)
-        except OSError as exc:
+        error = ""
+        for attempt in range(1, attempts + 1):
+            try:
+                got = _download(pkg, part, timeout_s)
+            except OSError as exc:
+                error = f"{pkg.filename}: {exc}"
+                log.info("attempt %d/%d failed: %s", attempt, attempts, error)
+                continue
+            if got != pkg.sha256:
+                error = f"{pkg.filename}: sha256 mismatch (got {got})"
+                break
+            part.replace(target)
+            report.downloaded.append(pkg.filename)
+            error = ""
+            break
+        if error:
             part.unlink(missing_ok=True)
-            report.failed.append(f"{pkg.filename}: {exc}")
-            continue
-        if digest.hexdigest() != pkg.sha256:
-            part.unlink(missing_ok=True)
-            report.failed.append(f"{pkg.filename}: sha256 mismatch (got {digest.hexdigest()})")
-            continue
-        part.replace(target)
-        report.downloaded.append(pkg.filename)
+            report.failed.append(error)
     return report
 
 

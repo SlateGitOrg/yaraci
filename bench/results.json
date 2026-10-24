@@ -1,0 +1,308 @@
+{
+  "machine": {
+    "platform": "macOS-26.6.2-arm64-arm-64bit",
+    "machine": "arm64",
+    "python": "3.12.13",
+    "cpus": 8
+  },
+  "corpus": {
+    "files": 48,
+    "mib": 9.0,
+    "seed": 7
+  },
+  "engines": {
+    "yara-x": {
+      "version": "1.22.0",
+      "v2_per_rule": [
+        {
+          "rule": "SUSP_Generic_LongBase64Blob",
+          "us_per_mib": 77089.2,
+          "slow": true,
+          "error": ""
+        },
+        {
+          "rule": "test_rule",
+          "us_per_mib": 541.0,
+          "slow": true,
+          "error": ""
+        },
+        {
+          "rule": "PUA_PE_Packer_UPX",
+          "us_per_mib": 145.5,
+          "slow": false,
+          "error": ""
+        },
+        {
+          "rule": "SUSP_PS_EncodedCommand_Hidden",
+          "us_per_mib": 17.0,
+          "slow": false,
+          "error": ""
+        },
+        {
+          "rule": "INFO_FileType_ELF",
+          "us_per_mib": 0.0,
+          "slow": false,
+          "error": ""
+        },
+        {
+          "rule": "INFO_FileType_OLE",
+          "us_per_mib": 0.0,
+          "slow": false,
+          "error": ""
+        },
+        {
+          "rule": "INFO_FileType_PE",
+          "us_per_mib": 0.0,
+          "slow": false,
+          "error": ""
+        },
+        {
+          "rule": "MAL_ELF_Miner_Stratum",
+          "us_per_mib": 0.0,
+          "slow": false,
+          "error": ""
+        },
+        {
+          "rule": "MAL_RansomNote_Generic",
+          "us_per_mib": 0.0,
+          "slow": false,
+          "error": ""
+        },
+        {
+          "rule": "MAL_Webshell_PHP_EvalBase64",
+          "us_per_mib": 0.0,
+          "slow": false,
+          "error": ""
+        },
+        {
+          "rule": "SUSP_SH_Dropper_CurlChmodExec",
+          "us_per_mib": 0.0,
+          "slow": false,
+          "error": ""
+        },
+        {
+          "rule": "SUSP_SH_PipeToShell",
+          "us_per_mib": 0.0,
+          "slow": false,
+          "error": ""
+        }
+      ],
+      "v2_slow_rules": [
+        "SUSP_Generic_LongBase64Blob",
+        "test_rule"
+      ],
+      "ps_case_study_us_per_mib": {
+        "before": 709.2,
+        "after": 144.4,
+        "baseline_no_patterns_us_per_mib": 3.7
+      },
+      "pack_mib_per_s": {
+        "v1": 1401.7,
+        "v2": 13.0
+      },
+      "v1_repeatability_us_per_mib": {
+        "INFO_FileType_ELF": {
+          "min": 0.0,
+          "max": 0.0,
+          "median": 0.0
+        },
+        "INFO_FileType_OLE": {
+          "min": 0.0,
+          "max": 0.0,
+          "median": 0.0
+        },
+        "INFO_FileType_PE": {
+          "min": 0.0,
+          "max": 0.0,
+          "median": 0.0
+        },
+        "MAL_Doc_OLE_AutoOpenShell": {
+          "min": 0.0,
+          "max": 0.0,
+          "median": 0.0
+        },
+        "MAL_ELF_CoinMiner_Stratum": {
+          "min": 0.0,
+          "max": 0.0,
+          "median": 0.0
+        },
+        "MAL_RansomNote_Generic": {
+          "min": 0.0,
+          "max": 0.0,
+          "median": 0.0
+        },
+        "MAL_Webshell_PHP_EvalBase64": {
+          "min": 0.0,
+          "max": 1.7,
+          "median": 0.1
+        },
+        "PUA_PE_Packer_UPX": {
+          "min": 0.0,
+          "max": 0.1,
+          "median": 0.1
+        },
+        "SUSP_PS_EncodedCommand_Hidden": {
+          "min": 17.9,
+          "max": 19.4,
+          "median": 18.5
+        },
+        "SUSP_SH_Dropper_CurlChmodExec": {
+          "min": 0.2,
+          "max": 0.3,
+          "median": 0.3
+        }
+      },
+      "v1_slow_rules_any_run": []
+    },
+    "libyara": {
+      "version": "4.5.4",
+      "v2_per_rule": [
+        {
+          "rule": "SUSP_Generic_LongBase64Blob",
+          "us_per_mib": 104215.5,
+          "slow": true,
+          "error": ""
+        },
+        {
+          "rule": "MAL_RansomNote_Generic",
+          "us_per_mib": 624.2,
+          "slow": true,
+          "error": ""
+        },
+        {
+          "rule": "MAL_ELF_Miner_Stratum",
+          "us_per_mib": 349.5,
+          "slow": true,
+          "error": ""
+        },
+        {
+          "rule": "SUSP_PS_EncodedCommand_Hidden",
+          "us_per_mib": 206.6,
+          "slow": false,
+          "error": ""
+        },
+        {
+          "rule": "MAL_Webshell_PHP_EvalBase64",
+          "us_per_mib": 92.6,
+          "slow": false,
+          "error": ""
+        },
+        {
+          "rule": "SUSP_SH_PipeToShell",
+          "us_per_mib": 68.0,
+          "slow": false,
+          "error": ""
+        },
+        {
+          "rule": "SUSP_SH_Dropper_CurlChmodExec",
+          "us_per_mib": 7.5,
+          "slow": false,
+          "error": ""
+        },
+        {
+          "rule": "test_rule",
+          "us_per_mib": 7.4,
+          "slow": false,
+          "error": ""
+        },
+        {
+          "rule": "PUA_PE_Packer_UPX",
+          "us_per_mib": 6.2,
+          "slow": false,
+          "error": ""
+        },
+        {
+          "rule": "INFO_FileType_ELF",
+          "us_per_mib": 0.0,
+          "slow": false,
+          "error": ""
+        },
+        {
+          "rule": "INFO_FileType_OLE",
+          "us_per_mib": 0.0,
+          "slow": false,
+          "error": ""
+        },
+        {
+          "rule": "INFO_FileType_PE",
+          "us_per_mib": 0.0,
+          "slow": false,
+          "error": ""
+        }
+      ],
+      "v2_slow_rules": [
+        "SUSP_Generic_LongBase64Blob",
+        "MAL_RansomNote_Generic",
+        "MAL_ELF_Miner_Stratum"
+      ],
+      "ps_case_study_us_per_mib": {
+        "before": 1431.2,
+        "after": 1459.0,
+        "baseline_no_patterns_us_per_mib": 1035.6
+      },
+      "pack_mib_per_s": {
+        "v1": 294.0,
+        "v2": 9.4
+      },
+      "v1_repeatability_us_per_mib": {
+        "INFO_FileType_ELF": {
+          "min": 0.0,
+          "max": 1.2,
+          "median": 1.0
+        },
+        "INFO_FileType_OLE": {
+          "min": 0.7,
+          "max": 3.4,
+          "median": 1.2
+        },
+        "INFO_FileType_PE": {
+          "min": 0.3,
+          "max": 11.5,
+          "median": 2.9
+        },
+        "MAL_Doc_OLE_AutoOpenShell": {
+          "min": 785.7,
+          "max": 812.1,
+          "median": 806.0
+        },
+        "MAL_ELF_CoinMiner_Stratum": {
+          "min": 347.7,
+          "max": 368.8,
+          "median": 351.3
+        },
+        "MAL_RansomNote_Generic": {
+          "min": 618.7,
+          "max": 630.0,
+          "median": 619.5
+        },
+        "MAL_Webshell_PHP_EvalBase64": {
+          "min": 103.0,
+          "max": 104.3,
+          "median": 103.7
+        },
+        "PUA_PE_Packer_UPX": {
+          "min": 10.6,
+          "max": 16.2,
+          "median": 11.9
+        },
+        "SUSP_PS_EncodedCommand_Hidden": {
+          "min": 194.2,
+          "max": 205.3,
+          "median": 204.3
+        },
+        "SUSP_SH_Dropper_CurlChmodExec": {
+          "min": 11.7,
+          "max": 31.5,
+          "median": 25.3
+        }
+      },
+      "v1_slow_rules_any_run": [
+        "MAL_Doc_OLE_AutoOpenShell",
+        "MAL_RansomNote_Generic"
+      ]
+    }
+  },
+  "check_v1_wall_s": 0.08,
+  "check_v1_passed": true,
+  "check_v1_goodware_samples": 154
+}
