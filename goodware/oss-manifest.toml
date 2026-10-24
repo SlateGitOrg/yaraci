@@ -1,0 +1,53 @@
+# Pinned open-source packages used as a goodware corpus for false-positive testing.
+# Fetch with `make goodware` (or `yaraci fetch-goodware`). Files land in .cache/goodware/
+# and are verified against sha256 before use; nothing here is committed to the repo.
+# Wheels are zip archives: yaraci scans the archive and every member inside it.
+
+[[package]]
+name = "six"
+version = "1.17.0"
+url = "https://files.pythonhosted.org/packages/b7/ce/149a00dd41f10bc29e5921b496af8b574d8413afcd5e30dfa0ed46c2cc5e/six-1.17.0-py2.py3-none-any.whl"
+sha256 = "4721f391ed90541fddacab5acf947aa0d3dc7d27b2e1e8eda2be8970586c3274"
+license = "MIT"
+
+[[package]]
+name = "idna"
+version = "3.10"
+url = "https://files.pythonhosted.org/packages/76/c6/c88e154df9c4e1a2a66ccf0005a88dfb2650c1dffb6f5ce603dfbd452ce3/idna-3.10-py3-none-any.whl"
+sha256 = "946d195a0d259cbba61165e88e65941f16e9b36ea6ddb97f00452bae8b1287d3"
+license = "BSD-3-Clause"
+
+[[package]]
+name = "certifi"
+version = "2025.8.3"
+url = "https://files.pythonhosted.org/packages/e5/48/1549795ba7742c948d2ad169c1c8cdbae65bc450d6cd753d124b17c8cd32/certifi-2025.8.3-py3-none-any.whl"
+sha256 = "f6c12493cfb1b06ba2ff328595af9350c65d6644968e5d3a2ffd78699af217a5"
+license = "MPL-2.0"
+
+[[package]]
+name = "click"
+version = "8.1.8"
+url = "https://files.pythonhosted.org/packages/7e/d4/7ebdbd03970677812aac39c869717059dbb71a4cfc033ca6e5221787892c/click-8.1.8-py3-none-any.whl"
+sha256 = "63c132bbbed01578a06712a2d1f497bb62d9c1c0d329b7903a866228027263b2"
+license = "BSD-3-Clause"
+
+[[package]]
+name = "requests"
+version = "2.32.4"
+url = "https://files.pythonhosted.org/packages/7c/e4/56027c4a6b4ae70ca9de302488c5ca95ad4a39e190093d6c1a8ace08341b/requests-2.32.4-py3-none-any.whl"
+sha256 = "27babd3cda2a6d50b30443204ee89830707d396671944c998b5975b031ac2b2c"
+license = "Apache-2.0"
+
+[[package]]
+name = "urllib3"
+version = "2.5.0"
+url = "https://files.pythonhosted.org/packages/a7/c2/fe1e52489ae3122415c51f387e221dd0773709bad6c6cdaa599e8a2c5185/urllib3-2.5.0-py3-none-any.whl"
+sha256 = "e6b01673c0fa6a13e374b50871808eb3bf7046c4b125b216f6bf1cc604cff0dc"
+license = "MIT"
+
+[[package]]
+name = "charset-normalizer"
+version = "3.4.3"
+url = "https://files.pythonhosted.org/packages/8a/1f/f041989e93b001bc4e44bb1669ccdcf54d3f00e628229a85b08d330615c5/charset_normalizer-3.4.3-py3-none-any.whl"
+sha256 = "ce571ab16d890d23b5c278547ba694193a45011ff86a9162a71307ed9f86759a"
+license = "MIT"
