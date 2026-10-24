@@ -101,6 +101,24 @@ class RulePack:
         body = "\n\n".join(m.source_text for m in members)
         return SourceUnit(path=f"{self.get(name).path}#{name}", text=header + body)
 
+    def dependents(self, name: str) -> list[str]:
+        """Rules whose condition references ``name`` directly."""
+        return [r.name for r in self.rules if name in r.deps]
+
+    def units_without(self, name: str) -> list[SourceUnit]:
+        """Pack sources with rule ``name`` blanked out (line numbers preserved)."""
+        target = self.get(name)
+        out = []
+        for unit in self.units:
+            if unit.path != target.path:
+                out.append(unit)
+                continue
+            start, end = target.rule.start_offset, target.rule.end_offset
+            removed = unit.text[start:end]
+            blank = "".join("\n" if ch == "\n" else " " for ch in removed)
+            out.append(SourceUnit(unit.path, unit.text[:start] + blank + unit.text[end:]))
+        return out
+
 
 def _discover(cfg: Config) -> list[Path]:
     found: list[Path] = []
