@@ -37,6 +37,7 @@ select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF", "PL", "PT", "C4", "PIE", 
 ignore = [
     "PLR2004", # magic values are domain thresholds, documented in place
     "PLR0913", # CLI-facing functions legitimately take many options
+    "PLR0917", # internal helpers take explicit positional context
     "S101",    # asserts narrow types for mypy
     "S603",    # subprocess with fixed argv in scripts
     "RET505",

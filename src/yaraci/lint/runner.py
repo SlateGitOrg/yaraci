@@ -6,7 +6,7 @@ import logging
 from collections import defaultdict
 from datetime import date
 
-from yaraci.engine import Backend, Diagnostic, RuleCompileError
+from yaraci.engine import Backend, CompileResult, Diagnostic, RuleCompileError
 from yaraci.lint import checks_condition, checks_meta, checks_strings  # noqa: F401 - registers checks
 from yaraci.lint.model import RULE_CHECKS, SPECS, CheckSpec, Finding, LintContext, Severity, register_spec
 from yaraci.pack import RulePack
@@ -97,17 +97,23 @@ def _rule_for_line(pack: RulePack, path: str | None, line: int | None) -> str | 
     return None
 
 
-def compile_findings(pack: RulePack, backend: Backend) -> tuple[list[Finding], bool]:
-    """Compile the pack; return engine findings and whether compilation succeeded."""
+def compile_findings(pack: RulePack, backend: Backend) -> tuple[list[Finding], CompileResult | None]:
+    """Compile the pack once; return engine findings and the result (``None`` on failure)."""
     try:
         result = backend.compile(pack.units, pack.config.pack.scan_timeout_s)
     except RuleCompileError as exc:
-        return _engine_findings(exc.diagnostics, COMPILE_ERROR), False
-    return _engine_findings(result.warnings, COMPILE_WARNING), True
+        found = _engine_findings(exc.diagnostics, COMPILE_ERROR)
+        return [_attribute(pack, f) for f in found], None
+    return [_attribute(pack, f) for f in _engine_findings(result.warnings, COMPILE_WARNING)], result
 
 
-def raw_findings(pack: RulePack, today: date, backend: Backend | None = None) -> list[Finding]:
-    """All findings before policy (disable/severity/suppression) is applied."""
+def _attribute(pack: RulePack, f: Finding) -> Finding:
+    rule = _rule_for_line(pack, f.path, f.line)
+    return Finding(f.code, f.severity, f.message, f.path, f.line, f.column, rule) if rule else f
+
+
+def static_findings(pack: RulePack, today: date) -> list[Finding]:
+    """All front-end findings before policy (disable/severity/suppression) is applied."""
     findings: list[Finding] = []
     for err in pack.parse_errors:
         findings.append(_finding(PARSE_ERROR, err.message, path=err.path, line=err.line, column=err.column))
@@ -144,13 +150,6 @@ def raw_findings(pack: RulePack, today: date, backend: Backend | None = None) ->
                         rule=pr.name,
                     )
                 )
-    if backend is not None:
-        engine, _ = compile_findings(pack, backend)
-        for f in engine:
-            rule = _rule_for_line(pack, f.path, f.line)
-            findings.append(
-                Finding(f.code, f.severity, f.message, f.path, f.line, f.column, rule) if rule else f
-            )
     return findings
 
 
@@ -181,4 +180,7 @@ def apply_policy(pack: RulePack, findings: list[Finding]) -> list[Finding]:
 
 def lint_pack(pack: RulePack, today: date | None = None, backend: Backend | None = None) -> list[Finding]:
     """Lint ``pack``; if ``backend`` is given, engine diagnostics are included."""
-    return apply_policy(pack, raw_findings(pack, today or date.today(), backend))
+    findings = static_findings(pack, today or date.today())
+    if backend is not None:
+        findings += compile_findings(pack, backend)[0]
+    return apply_policy(pack, findings)
