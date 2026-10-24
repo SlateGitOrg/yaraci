@@ -1,0 +1,28 @@
+# yaraci policy for the v1 lab pack. Paths are relative to this file.
+[pack]
+name = "lab-pack"
+rules = ["rules"]
+fixtures = "fixtures"
+engine = "yara-x"
+scan_timeout_s = 10
+
+[lint]
+name_prefixes = ["MAL", "SUSP", "PUA", "HKTL", "INFO"]
+required_meta = ["author", "description", "date"]
+recommended_meta = ["reference", "severity"]
+
+[goodware]
+dirs = ["../goodware"]
+fetched_dir = "../../.cache/goodware"
+allowlist = "fp-allowlist.toml"
+
+[profile]
+corpus = ["../goodware", "fixtures"]
+repeat = 5
+
+[gate]
+lint_fail_on = "error"
+fail_on_untested = true
+max_fp = 0
+fail_on_slow = true
+min_grade = "C"

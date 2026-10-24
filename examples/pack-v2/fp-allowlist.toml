@@ -1,0 +1,8 @@
+# Accepted false positives: each entry needs a justification and an expiry date.
+# An expired entry stops suppressing its FP, forcing a re-review.
+#
+# [[allow]]
+# rule = "PUA_PE_Packer_UPX"
+# sha256 = "<64 hex chars>"
+# reason = "vendor ships a UPX-packed updater; packer detection is intended"
+# expires = "2027-01-31"
