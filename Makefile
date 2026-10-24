@@ -34,6 +34,7 @@ coverage: test
 
 examples-check: sync
 	$(RUN) python scripts/make_examples.py --check
+	$(RUN) python scripts/gen_checks_doc.py --check
 
 check: format-check lint typecheck examples-check test
 

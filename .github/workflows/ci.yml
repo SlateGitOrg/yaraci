@@ -1,0 +1,63 @@
+# Not yet executed: this repository has not been pushed. It runs the same gates as `make check`.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: make check (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - name: Install Python 3.12
+        run: uv python install 3.12
+      - name: Format, lint, type-check, tests + coverage, fixture freshness
+        run: make check
+      - name: End-to-end demo
+        run: make demo
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: demo-reports-${{ matrix.os }}
+          path: out/
+
+  rule-gate:
+    # Dogfooding: gate the example pack exactly as a rules repository would,
+    # publish JUnit to the job summary and SARIF to code scanning.
+    name: yaraci gate on examples/pack-v1
+    runs-on: ubuntu-latest
+    needs: check
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv python install 3.12
+      - name: Fetch pinned OSS goodware (sha256-verified)
+        run: make goodware
+      - name: yaraci check
+        run: >
+          uv run --frozen yaraci check examples/pack-v1
+          --junit out/junit.xml --sarif out/results.sarif --markdown out/summary.md
+      - name: Job summary
+        if: always()
+        run: cat out/summary.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: out/results.sarif
+          category: yaraci
