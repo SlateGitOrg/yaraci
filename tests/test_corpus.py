@@ -105,3 +105,53 @@ def test_expand_globs(tmp_path: Path) -> None:
     found = expand_globs([str(tmp_path / "*")], max_files=2)
     assert [p.name for p in found] == ["a", "b"]
     assert expand_globs([str(tmp_path / "nothing*")], 5) == []
+
+
+def test_nested_archives_expanded_one_level_only() -> None:
+    inner = _zip({"deep.txt": b"deep"})
+    mid = _zip({"inner.zip": inner, "mid.txt": b"mid"})
+    outer = _zip({"mid.zip": mid, "nested.tar.gz": _tar({"t.txt": b"t"})})
+    builder = CorpusBuilder()
+    builder.add_bytes("outer.zip", outer, "contributed")
+    names = sorted(s.name for s in builder.samples)
+    assert names == ["outer.zip", "outer.zip!mid.zip", "outer.zip!nested.tar.gz"]
+    assert builder.stats.archive_members == 2
+    assert not any(name.count("!") > 1 for name in names)
+
+
+def test_zip_of_zips_bomb_is_bounded() -> None:
+    # The review reproduction: an 8x8 zip-of-zips of 4 MiB compressible leaves.
+    def deflated(members: dict[str, bytes]) -> bytes:
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+            for name, data in members.items():
+                zf.writestr(name, data)
+        return buf.getvalue()
+
+    leaf = b"\0" * (4 * 1024 * 1024)
+    mids = {f"m{i}.zip": deflated({f"leaf{j}.bin": leaf + bytes([i, j]) for j in range(8)}) for i in range(8)}
+    bomb = deflated(mids)
+    builder = CorpusBuilder()
+    builder.add_bytes("bomb.zip", bomb, "contributed")
+    assert len(builder.samples) == 1 + len(mids)
+    assert builder.total_bytes <= len(bomb) + Limits().max_archive_total
+
+
+def test_expansion_budget_is_corpus_wide() -> None:
+    limits = Limits(max_archive_total=1_000, max_expanded_total=250)
+    builder = CorpusBuilder(limits=limits)
+    for i in range(4):
+        builder.add_bytes(f"a{i}.zip", _zip({f"m{i}-{j}": bytes([i, j]) * 25 for j in range(3)}), "t")
+    members = [s for s in builder.samples if "!" in s.name]
+    assert sum(s.size for s in members) <= 250
+    assert len(members) == 5
+    assert any("corpus-wide" in err for err in builder.stats.archive_errors)
+
+
+def test_expand_archive_honours_caller_budget() -> None:
+    data = _zip({f"m{i}": bytes([i]) * 50 for i in range(5)})
+    stats = CorpusStats()
+    assert len(list(expand_archive("x.zip", data, Limits(), stats, budget=120))) == 2
+    assert stats.skipped_large == 3
+    assert len(list(expand_archive("x.zip", data, Limits(max_archive_total=100), stats, budget=10_000))) == 2
+    assert "budget" in stats.archive_errors[-1]

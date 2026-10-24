@@ -6,9 +6,12 @@ binaries, contributed fixtures), so the loader is defensive:
 * symlinks and non-regular files are skipped (no loops, no escaping the corpus);
 * files above ``max_file_size`` are skipped, never truncated (a truncated file
   would produce misleading match results);
-* archives (zip/wheel/jar, tar/tar.gz) are expanded one level deep, in memory,
-  with per-member and per-archive byte budgets that are enforced on the bytes
-  actually read, not on the sizes the archive header claims (zip-bomb guard);
+* archives (zip/wheel/jar, tar/tar.gz) are expanded exactly one level deep, in
+  memory: a member that is itself an archive is scanned as an opaque blob and
+  never expanded again. Per-member, per-archive and corpus-wide byte budgets are
+  enforced on the bytes actually read, not on the sizes the archive header
+  claims (zip-bomb guard), so total expansion is bounded no matter how many
+  archives a contributed corpus holds;
 * identical content is scanned once (SHA-256 dedup), recording every name.
 """
 
@@ -51,6 +54,7 @@ class Limits:
     max_members: int = 2_000
     max_member_size: int = 8 * 1024 * 1024
     max_archive_total: int = 64 * 1024 * 1024
+    max_expanded_total: int = 256 * 1024 * 1024
     expand_archives: bool = True
 
 
@@ -111,9 +115,15 @@ def _read_bounded(stream: IO[bytes], limit: int) -> bytes | None:
     return None if len(data) > limit else data
 
 
-def expand_archive(name: str, data: bytes, limits: Limits, stats: CorpusStats) -> Iterator[tuple[str, bytes]]:
-    """Yield ``(member_name, bytes)`` for regular members of a zip or tar archive."""
-    budget = limits.max_archive_total
+def expand_archive(
+    name: str, data: bytes, limits: Limits, stats: CorpusStats, budget: int | None = None
+) -> Iterator[tuple[str, bytes]]:
+    """Yield ``(member_name, bytes)`` for regular members of a zip or tar archive.
+
+    At most ``min(limits.max_archive_total, budget)`` member bytes are read; callers
+    sharing one budget across archives pass what is left of it as ``budget``.
+    """
+    budget = limits.max_archive_total if budget is None else min(limits.max_archive_total, budget)
     count = 0
     try:
         if _is_zip(name):
@@ -162,8 +172,15 @@ class CorpusBuilder:
     samples: list[Sample] = field(default_factory=list)
     aliases: dict[str, list[str]] = field(default_factory=dict)
     _index: dict[str, int] = field(default_factory=dict)
+    _expanded_bytes: int = 0
 
-    def add_bytes(self, name: str, data: bytes, origin: str) -> Sample | None:
+    def add_bytes(self, name: str, data: bytes, origin: str, *, expand: bool = True) -> Sample | None:
+        """Add one blob; expand it if it is an archive and ``expand`` is true.
+
+        Archive members are added with ``expand=False``: expansion is one level
+        deep, so a nested archive is scanned as an opaque blob. Every expanded
+        byte is charged to one corpus-wide budget (``limits.max_expanded_total``).
+        """
         digest = sha256(data)
         if digest in self._index:
             self.stats.duplicates += 1
@@ -172,10 +189,15 @@ class CorpusBuilder:
         sample = Sample(name, data, digest, origin)
         self._index[digest] = len(self.samples)
         self.samples.append(sample)
-        if self.limits.expand_archives and (_is_zip(name) or _is_tar(name)):
-            for member, blob in expand_archive(name, data, self.limits, self.stats):
+        if expand and self.limits.expand_archives and (_is_zip(name) or _is_tar(name)):
+            remaining = self.limits.max_expanded_total - self._expanded_bytes
+            if remaining <= 0:
+                self.stats.archive_errors.append(f"{name}: corpus-wide expansion budget exhausted")
+                return sample
+            for member, blob in expand_archive(name, data, self.limits, self.stats, budget=remaining):
                 self.stats.archive_members += 1
-                self.add_bytes(member, blob, origin)
+                self._expanded_bytes += len(blob)
+                self.add_bytes(member, blob, origin, expand=False)
         return sample
 
     def add_path(self, path: Path, display: str, origin: str) -> None:
