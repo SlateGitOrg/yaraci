@@ -107,23 +107,6 @@ def module_roots(expr: ast.Expr) -> set[str]:
     return roots
 
 
-def string_references(expr: ast.Expr) -> list[str]:
-    """String identifiers referenced anywhere (``$a``, ``#a``, ``@a``, ``!a`` and set entries).
-
-    ``them`` is reported as ``"$*"``; anonymous loop references (``$``) are skipped.
-    """
-    refs: list[str] = []
-    for node in walk(expr):
-        if isinstance(node, ast.StringMatch | ast.StringCount | ast.StringOffset | ast.StringLength):
-            if node.name != "$":
-                refs.append(node.name)
-        elif isinstance(node, ast.Of) and isinstance(node.target, ast.StringSet):
-            refs.extend(node.target.patterns or ("$*",))
-        elif isinstance(node, ast.ForOf):
-            refs.extend(node.strings.patterns or ("$*",))
-    return refs
-
-
 def expand_string_set(patterns: tuple[str, ...] | None, identifiers: list[str]) -> list[str]:
     """Resolve a string set (``None`` = ``them``) against a rule's string identifiers.
 

@@ -57,9 +57,6 @@ class TPReport:
     def failures(self) -> list[CaseResult]:
         return [r for r in self.results if not r.passed]
 
-    def failed_rules(self) -> set[str]:
-        return {r.case.rule for r in self.failures}
-
     def positives_for(self, rule: str) -> int:
         return sum(1 for r in self.results if r.case.rule == rule and r.case.expect_match)
 

