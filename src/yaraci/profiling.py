@@ -86,7 +86,9 @@ class ProfileReport:
 
     @property
     def pack_mb_per_s(self) -> float:
-        return MIB / self.pack_us_per_mb if self.pack_us_per_mb > 0 else math.inf
+        """Whole-pack scan throughput (baseline pass included), MiB per second."""
+        gross = self.pack_us_per_mb + self.baseline_us_per_mb
+        return 1e6 / gross if gross > 0 else math.inf
 
 
 def time_scans(compiled: CompiledRules, samples: list[Sample], repeat: int, clock: Clock) -> list[float]:
