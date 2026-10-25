@@ -1,4 +1,4 @@
-# Not yet executed: this repository has not been pushed. It runs the same gates as `make check`.
+# Runs the same gates as `make check`, the offline demo, and yaraci itself on the example pack.
 name: CI
 
 on:
@@ -42,7 +42,9 @@ jobs:
     needs: check
     permissions:
       contents: read
+      # upload-sarif writes the analysis and reads this workflow run's metadata.
       security-events: write
+      actions: read
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
@@ -54,10 +56,24 @@ jobs:
           uv run --frozen yaraci check examples/pack-v1
           --junit out/junit.xml --sarif out/results.sarif --markdown out/summary.md
       - name: Job summary
-        if: always()
+        if: always() && hashFiles('out/summary.md') != ''
         run: cat out/summary.md >> "$GITHUB_STEP_SUMMARY"
-      - uses: github/codeql-action/upload-sarif@v3
-        if: always()
+      - name: Keep the SARIF report
+        if: always() && hashFiles('out/results.sarif') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: yaraci-sarif
+          path: out/results.sarif
+      # Code scanning accepts uploads on public repositories (private ones need GitHub
+      # Code Security), and pull requests from forks get a read-only token. Skip the
+      # upload in those cases; the gate above still decides the job result.
+      - name: Upload SARIF to code scanning
+        if: >-
+          always() && hashFiles('out/results.sarif') != '' &&
+          !github.event.repository.private &&
+          (github.event_name != 'pull_request' ||
+          github.event.pull_request.head.repo.full_name == github.repository)
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: out/results.sarif
           category: yaraci
