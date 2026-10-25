@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "CI harness for YARA rule quality: lint, true/false-positive tests, per-rule profiling, rule-set diffs, JUnit/SARIF output."
 readme = "README.md"
 license = "MIT"
-authors = [{ name = "archit2501" }]
+authors = [{ name = "yaraci contributors" }]
 requires-python = ">=3.12"
 dependencies = [
     "yara-x>=1.22.0,<2",

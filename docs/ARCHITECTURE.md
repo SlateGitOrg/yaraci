@@ -7,33 +7,33 @@ code. Nothing in a stage mutates the pack.
 
 ```mermaid
 flowchart TD
-    subgraph frontend[Front-end]
-        LEX[syntax/lexer.py] --> PAR[syntax/parser.py] --> AST[syntax/ast.py]
-        HEX[syntax/hexstr.py] -.-> AST
-        AST --> UNP[syntax/unparse.py]
-        AST --> WALK[syntax/walk.py]
+    subgraph frontend["Front-end (syntax/)"]
+        LEX["lexer.py"] --> PAR["parser.py"] --> AST["ast.py"]
+        HEX["hexstr.py"] -.-> AST
+        AST --> UNP["unparse.py"]
+        AST --> WALK["walk.py"]
     end
-    CFG[config.py yaraci.toml] --> PACK
-    AST --> PACK[pack.py RulePack: discovery, topo order, closures]
-    PACK --> LINT[lint/ 35 check codes + atoms.py]
-    PACK --> ENG[engine/ yara-x | libyara]
+    CFG["config.py<br/>yaraci.toml"] --> PACK
+    AST --> PACK["pack.py RulePack<br/>discovery, topo order, closures"]
+    PACK --> LINT["lint/<br/>35 check codes + atoms.py"]
+    PACK --> ENG["engine/<br/>YARA-X or libyara"]
     ENG --> LINT
-    CORP[corpus.py + goodware.py] --> FP
-    PACK --> TP[testing.py fixtures]
+    CORP["corpus.py + goodware.py"] --> FP
+    PACK --> TP["testing.py<br/>fixtures"]
     ENG --> TP
-    ENG --> FP[fp.py goodware scan + allowlist]
-    ENG --> PROF[profiling.py isolated / leave-one-out]
-    LINT --> Q[quality.py scorecards]
+    ENG --> FP["fp.py<br/>goodware scan + allowlist"]
+    ENG --> PROF["profiling.py<br/>isolated / leave-one-out"]
+    LINT --> Q["quality.py<br/>scorecards"]
     TP --> Q
     FP --> Q
     PROF --> Q
-    Q --> GATE[gate.py bitmask]
-    PACK --> DIFF[diff.py structural + impact]
+    Q --> GATE["gate.py<br/>exit bitmask"]
+    PACK --> DIFF["diff.py<br/>structural + impact"]
     ENG --> DIFF
-    ENG --> PAR2[parity.py libyara vs yara-x]
-    GATE --> REP[report/ text, Markdown, JSON, JUnit, SARIF]
+    ENG --> PAR2["parity.py<br/>libyara vs YARA-X"]
+    GATE --> REP["report/<br/>text, Markdown, JSON, JUnit, SARIF"]
     DIFF --> REP
-    CLI[cli.py] --> PIPE[pipeline.py run_check]
+    CLI["cli.py"] --> PIPE["pipeline.py<br/>run_check"]
     PIPE -.-> GATE
     CLI --> DIFF
     CLI --> PAR2
